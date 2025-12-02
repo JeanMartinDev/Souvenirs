@@ -10,6 +10,7 @@ import MapKit
 
 struct MemoryDetailView: View {
     let memory: Memory
+    @State private var audioManager = AudioRecorderManager()
     @Environment(\.dismiss) private var dismiss
     
     
@@ -77,6 +78,51 @@ struct MemoryDetailView: View {
                     } //inner vstack 2 end
                     .padding(.horizontal)
                     
+                    //Audio player (if audio exists)
+                    if memory.hasAudio, let audioFileName = memory.audioFileName {
+                        Divider()
+                            .padding(.horizontal)
+                        
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Voice Recording")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                            
+                            HStack {
+                                Button(action: {
+                                    toggleAudioPlayback(filename: audioFileName)
+                                }) {
+                                    Image(systemName: audioManager.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                                        .font(.system(size: 50))
+                                        .foregroundColor(.blue)
+                                    
+                                } //button end
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    if audioManager.isPlaying {
+                                        Text(formatTime(audioManager.playbackTime))
+                                            .font(.system(.body, design: .monospaced))
+                                        
+                                    } //inner if statement end
+                                    
+                                    Text(audioManager.isPlaying ? "Playing..." : "Tap to play")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                    
+                                } //inner audio vstack end
+                                
+                                Spacer()
+                                
+                            } //audio hstack end
+                            .padding()
+                            .background(Color(.blue).opacity(0.1))
+                            .cornerRadius(12)
+                            
+                        } //audio vstack end
+                        .padding(.horizontal)
+                        
+                    } //inner if statement end
+                    
                     Divider()
                         .padding(.horizontal)
                     
@@ -110,6 +156,38 @@ struct MemoryDetailView: View {
             
         }//navigation stack end
     } // body end
+    
+    //MARK: LET US ADD FUNCTIONS HERE
+    private func toggleAudioPlayback(filename: String) {
+        guard let audioURL = audioManager.getAudioURL(for: filename) else {
+            return
+        } //guad end
+        
+        if audioManager.isPlaying {
+            audioManager.pausePlayback()
+        } else {
+            do {
+                if audioManager.playbackTime == 0 {
+                    try audioManager.playAudio(from: audioURL)
+                    
+                } else {
+                    audioManager.resumePlayback()
+                } //inner if end
+                
+            } catch {
+                print("Failed to play audio: \(error)")
+                
+            } //catch end
+            
+        } //if statement end
+    } //func 1 end
+    
+    private func formatTime(_ time: TimeInterval) -> String {
+        let minutes = Int(time) / 60
+        let seconds = Int(time) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+        
+    } //func 2 end
 } //struct end
 
 #Preview {

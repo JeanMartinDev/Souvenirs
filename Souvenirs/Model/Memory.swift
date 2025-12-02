@@ -21,6 +21,10 @@ final class Memory {
     var isAnonymous: Bool
     var likesCount: Int
     
+    //AUDIO RECORDING
+    var audioFileName: String?
+    var hasAudio: Bool //quick check to see if audio exists
+    
     //OPTIONAL - FOR AUDIO RECORDINGS; TO BE ADDED LATER
 //    var audioFileName: String?
     
@@ -30,7 +34,8 @@ final class Memory {
          locationName: String,
          latitude: Double? = nil,
          longitude: Double? = nil,
-         isAnonymous: Bool = false) {
+         isAnonymous: Bool = false,
+         audioFileName: String? = nil) {
              
         self.id = UUID()
         self.title = title
@@ -41,6 +46,8 @@ final class Memory {
         self.createdDate = Date()
         self.isAnonymous = isAnonymous
         self.likesCount = 0
+        self.audioFileName = audioFileName
+        self.hasAudio = audioFileName != nil
     }
     
 }
