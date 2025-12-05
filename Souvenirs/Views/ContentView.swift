@@ -128,6 +128,15 @@ struct ContentView: View {
                     }
                     .padding(.vertical, 4)
                 }
+                .swipeActions(edge: .leading) {
+                    Button( action: {
+                        ShareManager.shared.shareMemoryAsImage(memory: memory)
+                    }) {
+                        Label("Share Memory", systemImage: "square.and.arrow.up")
+                        
+                    } //button end
+                    
+                } //swipe action end
             }
             .onDelete(perform: deleteMemories)
         }

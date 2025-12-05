@@ -195,7 +195,7 @@ struct AudioRecorderView: View {
     
     //MARK: ACTIONS
     private func startRecording() {
-        task {
+        Task {
             do {
                 _ = try await audioManager.startRecording()
                 

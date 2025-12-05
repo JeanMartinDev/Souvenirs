@@ -143,6 +143,22 @@ struct MemoryDetailView: View {
                 .navigationBarTitle(memory.title)
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Menu {
+                            Button( action: { shareAsText() }) {
+                                Label("Share as Text", systemImage: "text.quote")
+                                
+                            } //button end
+                            
+                            Button(action: { shareAsImage() }) {
+                                Label("Share as Image", systemImage: "photo")
+                            }
+                            
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                        } //menu end
+                        
+                    } //tool bar item 1
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Done") {
                             dismiss()
@@ -188,6 +204,16 @@ struct MemoryDetailView: View {
         return String(format: "%02d:%02d", minutes, seconds)
         
     } //func 2 end
+    
+    //MARK: SHARE ACTIONS
+    private func shareAsText() {
+        ShareManager.shared.shareMemoryAsText(memory: memory)
+    }
+    
+    private func shareAsImage() {
+        ShareManager.shared.shareMemoryAsImage(memory: memory)
+        
+    } //func 4 end
 } //struct end
 
 #Preview {

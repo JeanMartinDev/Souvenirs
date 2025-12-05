@@ -145,70 +145,105 @@ struct AddMemoryView: View {
         
         
     } //var end
+    
     private func saveMemory() {
-        //validate input
+        // Validate input
         guard !title.trimmingCharacters(in: .whitespaces).isEmpty else {
-            alertMessage = "Please enter a title for your memory"
+            alertMessage = "Please enter a title for your memory."
             showingAlert = true
             return
-            
-        } //uard statement 1 end
+        }
         
         guard !locationName.trimmingCharacters(in: .whitespaces).isEmpty else {
-            alertMessage = "Please enter a location!"
+            alertMessage = "Please enter a location."
             showingAlert = true
             return
         }
         
         guard !content.trimmingCharacters(in: .whitespaces).isEmpty || recordedAudioURL != nil else {
-            alertMessage = "Please share your story or record an audio"
+            alertMessage = "Please share your story or record audio."
             showingAlert = true
             return
         }
         
         isSaving = true
         
-        //Save audio file if one exists
-        task {
-            var saveAudioFileName: String? = nil
+        Task {
+            // Save audio file if exists
+            var savedAudioFileName: String? = nil
             if let audioURL = recordedAudioURL {
                 let fileName = "\(UUID().uuidString).m4a"
                 do {
-                    saveAudioFileName = try audioManager.saveAudioFile(from: audioURL, withName: fileName)
-                    
+                    savedAudioFileName = try audioManager.saveAudioFile(from: audioURL, withName: fileName)
                 } catch {
                     await MainActor.run {
-                        alertMessage = "Failed to save audio recording!"
+                        alertMessage = "Failed to save audio recording."
                         showingAlert = true
                         isSaving = false
-                        
-                    }//await end
+                    }
                     return
-                }//catch end
-                
-            }//if let end
-            //GEOCODE the location BEFORE creating the memory
-            let coordinate = await LocationManager.shared.geocodeLocation(locationName.trimmingCharacters(in: .whitespaces))
+                }
+            }
             
-            //create the memory with coordinates
+            // Try to geocode the location with timeout
+            var coordinate: CLLocationCoordinate2D? = nil
+            
+            do {
+                coordinate = try await withTimeout(seconds: 5) {
+                    await LocationManager.shared.geocodeLocation(locationName.trimmingCharacters(in: .whitespaces))
+                }
+            } catch {
+                // Geocoding failed or timed out - continue anyway
+                print("Geocoding failed or timed out: \(error.localizedDescription)")
+            }
+            
+            // Create the memory (with or without coordinates)
             let newMemory = Memory(
                 title: title.trimmingCharacters(in: .whitespaces),
                 content: content.trimmingCharacters(in: .whitespaces),
                 locationName: locationName.trimmingCharacters(in: .whitespaces),
                 latitude: coordinate?.latitude,
                 longitude: coordinate?.longitude,
-                isAnonymous: isAnonymous, audioFileName: saveAudioFileName)
+                isAnonymous: isAnonymous,
+                audioFileName: savedAudioFileName
+            )
             
             await MainActor.run {
                 modelContext.insert(newMemory)
+                
+                // Try to save the context
+                do {
+                    try modelContext.save()
+                } catch {
+                    print("Failed to save context: \(error)")
+                }
+                
                 isSaving = false
                 dismiss()
-                
-            }//await end
+            }
+        }
+    }
+
+    // Add this helper function for timeout
+    private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async -> T?) async throws -> T? {
+        try await withThrowingTaskGroup(of: T?.self) { group in
+            group.addTask {
+                await operation()
+            }
             
-        } //task end
-        
-    }//func end
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                return nil
+            }
+            
+            if let result = try await group.next() {
+                group.cancelAll()
+                return result
+            }
+            
+            return nil
+        }
+    }
 } // struct end
 
 #Preview {

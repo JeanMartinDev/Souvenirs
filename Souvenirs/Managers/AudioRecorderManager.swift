@@ -24,23 +24,39 @@ class AudioRecorderManager: NSObject {
     private var currentRecordingURL: URL?
     
     // MARK: - Recording
-    
     func startRecording() async throws -> URL {
-        // Request microphone permission
-        let permissionGranted = await AVAudioApplication.requestRecordPermission()
+        print("🎤 AudioRecorderManager: startRecording called")
+        
+        // Request microphone permission using AVAudioSession
+        print("🎤 Requesting microphone permission...")
+        
+        let audioSession = AVAudioSession.sharedInstance()
+        
+        // Request permission
+        let permissionGranted = await withCheckedContinuation { continuation in
+            audioSession.requestRecordPermission { granted in
+                continuation.resume(returning: granted)
+            }
+        }
+        
+        print("🎤 Permission granted: \(permissionGranted)")
+        
         guard permissionGranted else {
+            print("❌ Permission denied")
             throw AudioError.permissionDenied
         }
         
         // Configure audio session
-        let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setCategory(.playAndRecord, mode: .default)
+        print("🎤 Configuring audio session...")
+        try audioSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
         try audioSession.setActive(true)
+        print("✅ Audio session configured")
         
         // Create temporary file URL
         let tempDir = FileManager.default.temporaryDirectory
         let fileName = UUID().uuidString + ".m4a"
         let fileURL = tempDir.appendingPathComponent(fileName)
+        print("🎤 Recording to: \(fileURL)")
         
         // Recording settings
         let settings: [String: Any] = [
@@ -51,8 +67,23 @@ class AudioRecorderManager: NSObject {
         ]
         
         // Create and start recorder
+        print("🎤 Creating audio recorder...")
         audioRecorder = try AVAudioRecorder(url: fileURL, settings: settings)
-        audioRecorder?.record()
+        
+        guard let recorder = audioRecorder else {
+            print("❌ Failed to create audio recorder")
+            throw AudioError.recordingFailed
+        }
+        
+        let success = recorder.record()
+        print("🎤 recorder.record() returned: \(success)")
+        
+        if !success {
+            print("❌ Failed to start recording")
+            throw AudioError.recordingFailed
+        }
+        
+        print("✅ Recording started successfully!")
         
         currentRecordingURL = fileURL
         isRecording = true
@@ -60,6 +91,7 @@ class AudioRecorderManager: NSObject {
         
         // Start timer
         startRecordingTimer()
+        print("🎤 Timer started")
         
         return fileURL
     }
