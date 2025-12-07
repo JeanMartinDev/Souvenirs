@@ -91,62 +91,100 @@ struct ContentView: View {
         List {
             ForEach(memories) { memory in
                 NavigationLink(destination: MemoryDetailView(memory: memory)) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(memory.title)
-                            .font(.headline)
-                        
-                        HStack {
-                            Image(systemName: "location.fill")
-                                .font(.caption)
-                                .foregroundColor(.blue)
-                            Text(memory.locationName)
-                                .font(.subheadline)
-                                .foregroundColor(.blue)
-                        }
-                        
-                        Text(memory.content)
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .lineLimit(2)
-                        
-                        HStack {
-                            Text(memory.createdDate, style: .date)
-                                .font(.caption)
-                                .foregroundColor(.gray)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(memory.title)
+                                .font(.headline)
                             
-                            Spacer()
-                            
-                            HStack(spacing: 4) {
-                                Image(systemName: "heart.fill")
+                            HStack {
+                                Image(systemName: "location.fill")
                                     .font(.caption)
+                                    .foregroundColor(.blue)
+                                
+                                Text(memory.locationName)
+                                    .font(.subheadline)
+                                    .foregroundColor(.blue)
+                                
+                            } //inner hstack end
+                            
+                            Text(memory.content)
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .lineLimit(2)
+                            
+                            HStack {
+                                Text(memory.createdDate, style: .date)
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                
+                                Spacer()
+                                
+                                if memory.hasAudio {
+                                    Image(systemName: "waveform")
+                                        .font(.caption)
+                                        .foregroundColor(.blue)
+                                    
+                                } //if end
+                                
+                            } //inner hstack 2 end
+                            
+                        } //vstack end
+                        
+                        Spacer()
+                        
+                        //LIKE BUTTON SEPARATE FROM NAVIGATION LINK
+                        Button(action: {
+                            toggleLike(for: memory)
+                        }) {
+                            VStack(spacing: 4) {
+                                Image(systemName: "heart.fill")
+                                    .font(.title3)
                                     .foregroundColor(.red)
+                                
                                 Text("\(memory.likesCount)")
                                     .font(.caption)
                                     .foregroundColor(.gray)
-                            }
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-                .swipeActions(edge: .leading) {
-                    Button( action: {
+                                
+                            } //iner vstack end
+                            
+                        } //BUTTON END
+                        .buttonStyle(.plain)
+                        
+                    } //hstack end
+                    .padding(.vertical)
+                    
+                } //navigation link end
+                .swipeActions(edge: .trailing) {
+                    Button(action: {
                         ShareManager.shared.shareMemoryAsImage(memory: memory)
                     }) {
-                        Label("Share Memory", systemImage: "square.and.arrow.up")
+                        Label("Share", systemImage: "square.and.arrow.up")
                         
                     } //button end
+                    .tint(.blue)
                     
-                } //swipe action end
-            }
+                } //swipeaction end
+                
+            } //foreach end
             .onDelete(perform: deleteMemories)
-        }
-    }
+            
+        }//list end
+        
+    } //list view end
 
     private func deleteMemories(offsets: IndexSet) {
         for index in offsets {
             modelContext.delete(memories[index])
         }
     }
+    
+    //
+    private func toggleLike(for memory: Memory) {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            memory.likesCount += 1
+        } //animation end
+        
+    } //func end
 }
 
 #Preview {

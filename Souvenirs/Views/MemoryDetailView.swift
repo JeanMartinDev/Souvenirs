@@ -11,6 +11,7 @@ import MapKit
 struct MemoryDetailView: View {
     let memory: Memory
     @State private var audioManager = AudioRecorderManager()
+    @State private var isLiked = false
     @Environment(\.dismiss) private var dismiss
     
     
@@ -128,13 +129,36 @@ struct MemoryDetailView: View {
                     
                     //LIKES SECTION
                     HStack {
-                        Image(systemName: "heart.fill")
-                            .foregroundColor(.red)
-                        Text("\(memory.likesCount) likes")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
                         
-                    }//hstack end
+                        Spacer()
+                        
+                        Button(action: toggleLike) {
+                            
+                            VStack(spacing: 8) {
+                                Image(systemName: isLiked ? "heart.fill" : "heart")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(isLiked ? .red : .gray)
+                                
+                                Text("\(memory.likesCount)")
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.gray)
+                                
+                                Text(memory.likesCount == 1 ? "like" : "likes")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                
+                            } //iner vstack end
+                            .padding()
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(12)
+                            
+                        } //button end
+                        .buttonStyle(.plain)
+                        
+                        Spacer()
+                        
+                    } //hstack end
                     .padding(.horizontal)
                     
                     Spacer()
@@ -214,6 +238,22 @@ struct MemoryDetailView: View {
         ShareManager.shared.shareMemoryAsImage(memory: memory)
         
     } //func 4 end
+    
+    private func toggleLike() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            
+            if isLiked {
+                memory.likesCount = max(0, memory.likesCount - 1)
+                
+            } else {
+                memory.likesCount += 1
+            }//if end
+            
+            isLiked.toggle()
+            
+        } //withanimation end
+        
+    } //func 5 end
 } //struct end
 
 #Preview {
