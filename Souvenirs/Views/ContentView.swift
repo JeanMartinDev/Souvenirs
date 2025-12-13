@@ -14,7 +14,9 @@ struct ContentView: View {
     
     @State private var showingAddMemory = false
     @State private var selectedTab = 0
-
+    @State private var searchManager = SearchManager()
+    @State private var showingFilters: Bool = false
+    
     var body: some View {
         TabView(selection: $selectedTab) {
             // List View Tab
@@ -23,17 +25,55 @@ struct ContentView: View {
                     if memories.isEmpty {
                         emptyStateView
                     } else {
-                        listView
-                    }
-                }
+                        
+                        VStack(spacing: 0) {
+                            
+                            //searchbar
+                            searchBar
+                            
+                            //Filter chips
+                            if searchManager.searchText.isEmpty && searchManager.selectedLocation == "All Locations" && !searchManager.showOnlyWithAudio && searchManager.sortOption == .dateNewest {
+                                
+                                //NO ACTIVE Filters -> show nothing
+                                
+                            } else {
+                                activeFiltersView
+                                
+                            } //if end
+                            
+                            listView
+                            
+                        } //inner vstack end
+                        
+                    } //if end
+                } //group end
                 .navigationTitle("Memories")
                 .toolbar {
+                    ToolbarItem (placement: .navigationBarLeading) {
+                        
+                        Button (action: { showingFilters = true}) {
+                            
+                            Image(systemName: "line.3.horizontal.decrease.circle")
+                            
+                        } //button end
+                        
+                    } //toolbar item end
+                    
                     ToolbarItem(placement: .navigationBarTrailing) {
+                        
                         Button(action: { showingAddMemory = true }) {
                             Label("Add Memory", systemImage: "plus")
-                        }
-                    }
-                }
+                            
+                        } //button end
+                        
+                    } //tool bar item 2 end
+                    
+                } //toolbar end
+                .sheet(isPresented: $showingFilters) {
+                    FilterView(searchManager: searchManager, memories: memories)
+                    
+                } //sheet end
+                
             }
             .tabItem {
                 Label("List", systemImage: "list.bullet")
@@ -86,92 +126,229 @@ struct ContentView: View {
         .padding()
     }
     
+    //MARK: SEARCH BAR
+    private var searchBar: some View {
+        
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.gray)
+            
+            TextField("Search Memories ...", text: $searchManager.searchText)
+                .textFieldStyle(.plain)
+            
+            if !searchManager.searchText.isEmpty {
+                
+                Button(action: {
+                    searchManager.searchText = ""
+                    
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.gray)
+                    
+                } //button trailing closure end
+                
+            } //if end
+            
+        } //hstack end
+        .padding(10)
+        .background(Color(.systemGray6))
+        .cornerRadius(10)
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        
+    } //inner view end
+    
+    //MARK: ACTIVE FILTERS
+    private var activeFiltersView: some View {
+        
+        ScrollView (.horizontal, showsIndicators: false) {
+            
+            HStack(spacing: 8) {
+                if !searchManager.searchText.isEmpty {
+                    
+                    FilterChip(
+                        text: "Search: \(searchManager.searchText)",
+                        onRemove: {searchManager.searchText = "" }
+                    )
+                    
+                } //if end
+                
+                if searchManager.selectedLocation != "All Locations" {
+                    
+                    FilterChip(
+                        text: searchManager.selectedLocation,
+                        onRemove: { searchManager.selectedLocation = "All Locations"}
+                    )
+                    
+                } //if end
+                
+                if searchManager.showOnlyWithAudio {
+                    
+                    FilterChip(
+                        text: "Has Audio",
+                        onRemove: { searchManager.showOnlyWithAudio = false }
+                    )
+                    
+                } //if end
+                
+                if searchManager.sortOption != .dateNewest {
+                    
+                    FilterChip(
+                        text: searchManager.sortOption.rawValue,
+                        onRemove: { searchManager.sortOption = .dateNewest }
+                    )
+                    
+                } //if end
+                
+                if searchManager.searchText.isEmpty == false || searchManager.selectedLocation != "All Locations" || searchManager.showOnlyWithAudio || searchManager.sortOption != .dateNewest {
+                    
+                    Button (action: {
+                        searchManager.clearFilters()
+                    }) {
+                        Text("Clear All")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(16)
+                    }
+                    
+                } //if end
+                
+            } //hstack end
+            .padding(.horizontal)
+            
+        } //scrollview end
+        .padding(.bottom, 8)
+        
+    } //inner view end
+    
+    
     // MARK: - List View
     private var listView: some View {
-        List {
-            ForEach(memories) { memory in
-                NavigationLink(destination: MemoryDetailView(memory: memory)) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(memory.title)
-                                .font(.headline)
-                            
+        
+        let filteredMemories = searchManager.filterAndSort(memories: memories)
+        
+        return Group {
+            
+            if filteredMemories.isEmpty {
+                
+                //No results view
+                VStack(spacing: 20) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 60))
+                        .foregroundColor(.gray)
+                    
+                    Text("No Memories Found!")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    
+                    Text("Try adjusting your search or filters")
+                        .foregroundColor(.gray)
+                    
+                    Button("Clear Filters") {
+                        
+                        searchManager.clearFilters()
+                        
+                    } //button end
+                    .padding(.top)
+                    
+                } //vstack end
+                .padding()
+                
+            } else {
+                
+                
+                List {
+                    ForEach(filteredMemories) { memory in
+                        NavigationLink(destination: MemoryDetailView(memory: memory)) {
                             HStack {
-                                Image(systemName: "location.fill")
-                                    .font(.caption)
-                                    .foregroundColor(.blue)
-                                
-                                Text(memory.locationName)
-                                    .font(.subheadline)
-                                    .foregroundColor(.blue)
-                                
-                            } //inner hstack end
-                            
-                            Text(memory.content)
-                                .font(.body)
-                                .foregroundColor(.secondary)
-                                .lineLimit(2)
-                            
-                            HStack {
-                                Text(memory.createdDate, style: .date)
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(memory.title)
+                                        .font(.headline)
+                                    
+                                    HStack {
+                                        Image(systemName: "location.fill")
+                                            .font(.caption)
+                                            .foregroundColor(.blue)
+                                        
+                                        Text(memory.locationName)
+                                            .font(.subheadline)
+                                            .foregroundColor(.blue)
+                                        
+                                    } //inner hstack end
+                                    
+                                    Text(memory.content)
+                                        .font(.body)
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(2)
+                                    
+                                    HStack {
+                                        Text(memory.createdDate, style: .date)
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                        
+                                        Spacer()
+                                        
+                                        if memory.hasAudio {
+                                            Image(systemName: "waveform")
+                                                .font(.caption)
+                                                .foregroundColor(.blue)
+                                            
+                                        } //if end
+                                        
+                                    } //inner hstack 2 end
+                                    
+                                } //vstack end
                                 
                                 Spacer()
                                 
-                                if memory.hasAudio {
-                                    Image(systemName: "waveform")
-                                        .font(.caption)
-                                        .foregroundColor(.blue)
+                                //LIKE BUTTON SEPARATE FROM NAVIGATION LINK
+                                Button(action: {
+                                    toggleLike(for: memory)
+                                }) {
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "heart.fill")
+                                            .font(.title3)
+                                            .foregroundColor(.red)
+                                        
+                                        Text("\(memory.likesCount)")
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                        
+                                    } //iner vstack end
                                     
-                                } //if end
+                                } //BUTTON END
+                                .buttonStyle(.plain)
                                 
-                            } //inner hstack 2 end
+                            } //hstack end
+                            .padding(.vertical)
                             
-                        } //vstack end
-                        
-                        Spacer()
-                        
-                        //LIKE BUTTON SEPARATE FROM NAVIGATION LINK
-                        Button(action: {
-                            toggleLike(for: memory)
-                        }) {
-                            VStack(spacing: 4) {
-                                Image(systemName: "heart.fill")
-                                    .font(.title3)
-                                    .foregroundColor(.red)
+                        } //navigation link end
+                        .swipeActions(edge: .trailing) {
+                            Button(action: {
+                                ShareManager.shared.shareMemoryAsImage(memory: memory)
+                            }) {
+                                Label("Share", systemImage: "square.and.arrow.up")
                                 
-                                Text("\(memory.likesCount)")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                                
-                            } //iner vstack end
+                            } //button end
+                            .tint(.blue)
                             
-                        } //BUTTON END
-                        .buttonStyle(.plain)
+                        } //swipeaction end
                         
-                    } //hstack end
-                    .padding(.vertical)
+                    } //foreach end
+                    .onDelete(perform: deleteMemories)
                     
-                } //navigation link end
-                .swipeActions(edge: .trailing) {
-                    Button(action: {
-                        ShareManager.shared.shareMemoryAsImage(memory: memory)
-                    }) {
-                        Label("Share", systemImage: "square.and.arrow.up")
-                        
-                    } //button end
-                    .tint(.blue)
-                    
-                } //swipeaction end
+                }//list end
                 
-            } //foreach end
-            .onDelete(perform: deleteMemories)
+            } //if end
             
-        }//list end
+        } //group end
+        
         
     } //list view end
-
+    
     private func deleteMemories(offsets: IndexSet) {
         for index in offsets {
             modelContext.delete(memories[index])
